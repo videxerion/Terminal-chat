@@ -3,23 +3,8 @@ import rsa
 import zlib
 import _pickle as cPickle
 from multiprocessing import Process
-import curses
 
-stdscr = curses.initscr()
-stdscr.keypad(True)
-curses.echo(True)
-stdscr.refresh()
-
-inputWin = curses.newwin(3, curses.COLS, curses.LINES - 3, 0)
-inputWin.keypad(True)
-
-inputWin.refresh()
-
-chatWin = curses.newwin(curses.LINES - 2, curses.COLS, 0, 0)
-chatWin.refresh()
-
-chatWin.addstr('Generate keys......')
-chatWin.refresh()
+print('Generate keys......')
 (pubkey, privkey) = rsa.newkeys(2048)
 
 
@@ -32,15 +17,13 @@ def getMessageLoop(sock: socket.socket):
             decryptedData = rsa.decrypt(deserializedData, key)
             return decryptedData
         else:
-            chatWin.addstr("server error")
-            chatWin.refresh()
+            print("server error")
             exit(0)
 
     try:
         while True:
             data = recv(4096, sock, privkey)
-            chatWin.addstr(data.decode('UTF-8'))
-            chatWin.refresh()
+            print(data.decode('UTF-8'))
     except KeyboardInterrupt:
         return 0
 
@@ -59,28 +42,20 @@ sock.connect(('localhost', 5005))  # подключемся к серверно�
 sock.send(cPickle.dumps(pubkey))
 pubkeyServer = cPickle.loads(sock.recv(2048))
 
-chatWin.clear()
-chatWin.refresh()
-
 while True:
-    sendMsg(input('Enter nickname: '), pubkeyServer)
+    sendMsg(input('\nEnter nickname: '), pubkeyServer)
     answer = sock.recv(5)
     if answer[0] == 0x1:
-        chatWin.addstr('This nickname already in use')
-        chatWin.refresh()
+        print('This nickname already in use')
     elif answer[0] == 0x0:
         break
-
-chatWin.clear()
-chatWin.refresh()
 
 getLoop = Process(target=getMessageLoop, args=tuple([sock]))
 getLoop.start()
 
 try:
     while True:
-        text = (inputWin.getstr()).decode(encoding='UTF-8')
+        text = input('> ')
         sendMsg(text, pubkeyServer)
 except KeyboardInterrupt:
-    curses.endwin()
     exit(0)
